@@ -1,0 +1,142 @@
+function createMap(quakesLayer)
+{
+    // Create the tile layer that will be the background of our map.
+    var street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    });
+
+    var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+    });
+
+    var dark = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+    });
+
+    // Create a baseMaps object to hold the layers.
+    let baseMaps = {
+    "Dark": dark,
+    "Street": street,
+    "Topography": topo
+    };
+
+    // overLayMaps object to hold layers
+    var overLays = {
+        "Earthquakes": quakesLayer
+    };
+
+    // Create map object
+    let map = L.map("map", {
+        center: [39.42, -111.95],
+        zoom: 5,
+        layers: [dark, quakesLayer]
+    });
+
+    // Create a layer control, and pass it baseMaps and overlayMaps. Add the layer control to the map.
+    L.control.layers(baseMaps, overLays, {
+    collapsed: false
+    }).addTo(map);
+
+    // Legend for colors that represent depth
+    var legend = L.control({position: 'bottomright'});
+
+    legend.onAdd = function (map) {
+
+        var div = L.DomUtil.create('div', 'info legend'),
+            bounds = ["<10", "10-30", "30-50", "50-70", "70-90", "90+"],
+            colors = ["lime", "yellow", "gold", "orange", "orangered", "red"];
+
+        for (var i = 0; i < colors.length; i++) {
+            div.innerHTML +=
+                '<i style="background:' + colors[i] + '"></i> ' + 
+                bounds[i] + '<br>';
+        }
+
+        return div;
+    };  
+
+    legend.addTo(map);
+}
+
+// Create bubble markers
+function createMarkers(data)
+{   
+    // Bind popup for each marker
+    function onEachFeature(feature, layer)
+    {
+      layer.bindPopup(`<h3>${feature.properties.place}</h3>
+                      <hr>
+                      <p>${new Date(feature.properties.time)}</p>
+                      <hr>
+                      <b>Magnitude: </b> ${feature.properties.mag}
+                      <br>
+                      <b>Depth: </b> ${feature.geometry.coordinates[2]}`);
+    }
+
+    // function for marker radius
+    function getRadius(mag)
+    {
+        if (mag < 0.2)
+            return 1;
+        else
+            return mag * 5;
+    }
+
+    // function for marker color scale
+    function getColor(depth)
+    {
+        if (depth > 90)
+            return "red";
+        else if (depth > 70)
+            return "orangered";
+        else if (depth > 50)
+            return "orange";
+        else if (depth > 30)
+            return "gold";
+        else if (depth > 10)
+            return "yellow";
+        else
+            return "lime";
+    }
+
+    let quakeMarkers = [];
+
+    for (var i = 0; i < data.features.length; i++)
+    {   
+        let feature = data.features[i];
+
+        let markerOptions = {
+            radius: getRadius(feature.properties.mag),
+            fillcolor: "yellow", //?
+            color: getColor(feature.geometry.coordinates[2]),
+            fillOpacity: 0.3,
+            opacity: 1,
+        };
+
+        let marker = L.geoJSON(feature, {
+            pointToLayer: function(feature, latlng) {
+                return L.circleMarker(latlng, markerOptions)
+            },
+
+            onEachFeature: onEachFeature
+        });
+
+        quakeMarkers.push(marker);
+    }
+
+    let quakesLayer = L.layerGroup(quakeMarkers);
+
+    createMap(quakesLayer);
+}
+
+
+// Get earthquake data and pass to createMarkers function
+
+// ALL quakes in the last 7 days
+// let url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson"
+
+// mag 2.5+ quakes in the last 7 days (for quicker testing)
+let url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.geojson"
+
+d3.json(url).then(createMarkers);
