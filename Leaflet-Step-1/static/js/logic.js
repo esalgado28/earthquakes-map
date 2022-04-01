@@ -5,38 +5,12 @@ function createMap(quakesLayer)
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     });
 
-    var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-    attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-    });
-
-    var dark = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
-    maxZoom: 20,
-    attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
-    });
-
-    // Create a baseMaps object to hold the layers.
-    let baseMaps = {
-    "Dark": dark,
-    "Street": street,
-    "Topography": topo
-    };
-
-    // overLayMaps object to hold layers
-    var overLays = {
-        "Earthquakes": quakesLayer
-    };
-
     // Create map object
     let map = L.map("map", {
-        center: [39.42, -111.95],
-        zoom: 5,
-        layers: [dark, quakesLayer]
+        center: [39.42, -111.95], // middle of Utah
+        zoom: 4,
+        layers: [street, quakesLayer]
     });
-
-    // Create a layer control, and pass it baseMaps and overlayMaps. Add the layer control to the map.
-    L.control.layers(baseMaps, overLays, {
-    collapsed: false
-    }).addTo(map);
 
     // Legend for colors that represent depth
     var legend = L.control({position: 'bottomright'});
@@ -77,10 +51,10 @@ function createMarkers(data)
     // function for marker radius
     function getRadius(mag)
     {
-        if (mag < 0.2)
-            return 1;
+        if (mag < 0.5)
+            return 2;
         else
-            return mag * 5;
+            return mag * 4;
     }
 
     // function for marker color scale
@@ -108,9 +82,10 @@ function createMarkers(data)
 
         let markerOptions = {
             radius: getRadius(feature.properties.mag),
-            fillcolor: "yellow", //?
-            color: getColor(feature.geometry.coordinates[2]),
-            fillOpacity: 0.3,
+            color: "black",
+            weight: .5,
+            fillColor: getColor(feature.geometry.coordinates[2]),
+            fillOpacity: 1,
             opacity: 1,
         };
 
@@ -134,9 +109,9 @@ function createMarkers(data)
 // Get earthquake data and pass to createMarkers function
 
 // ALL quakes in the last 7 days
-// let url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson"
+let url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson"
 
 // mag 2.5+ quakes in the last 7 days (for quicker testing)
-let url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.geojson"
+// let url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.geojson"
 
 d3.json(url).then(createMarkers);
